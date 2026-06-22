@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily MIS · DCCB</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <style>
+      :root {
+        --navy: #0b2545;
+        --navy-2: #13315c;
+        --teal: #0f6e6e;
+        --teal-light: #e6f4f3;
+        --paper: #f6f4ef;
+        --ink: #16213a;
+        --muted: #5b6478;
+        --line: #dfe3ea;
+        --amber: #c98a2c;
+        --white: #ffffff;
+        --radius: 10px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family:
+          "Segoe UI",
+          Roboto,
+          -apple-system,
+          BlinkMacSystemFont,
+          Arial,
+          sans-serif;
+        min-height: 100vh;
+      }
+      .ledger-rule {
+        height: 6px;
+        background: repeating-linear-gradient(
+          90deg,
+          var(--navy) 0 28px,
+          var(--teal) 28px 32px,
+          transparent 32px 40px
+        );
+        opacity: 0.9;
+      }
+      header.topbar {
+        background: var(--navy);
+        color: var(--white);
+        padding: 22px 32px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .brand .mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+        background: linear-gradient(145deg, var(--teal), #0a4f4f);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+      .brand .sub {
+        margin: 0;
+        font-size: 12.5px;
+        color: #b9c4d6;
+        letter-spacing: 0.4px;
+      }
+      .topbar .datebox {
+        font-size: 12.5px;
+        color: #cdd7e8;
+        text-align: right;
+        border-left: 1px solid rgba(255, 255, 255, 0.18);
+        padding-left: 16px;
+      }
+      .topbar .datebox span {
+        display: block;
+        color: var(--white);
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 34px 24px 64px;
+      }
+
+      .panel {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: 0 1px 2px rgba(15, 30, 60, 0.04);
+      }
+
+      .uploadPanel {
+        padding: 28px;
+        margin-bottom: 26px;
+      }
+      .uploadPanel h2 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .uploadPanel p.hint {
+        margin: 0 0 18px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .dropzone {
+        border: 1.5px dashed #b9c2d4;
+        border-radius: var(--radius);
+        background: var(--teal-light);
+        padding: 30px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color 0.15s ease,
+          background 0.15s ease;
+      }
+      .dropzone:hover,
+      .dropzone.drag {
+        border-color: var(--teal);
+        background: #dff0ef;
+      }
+      .dropzone .icon {
+        font-size: 26px;
+        margin-bottom: 8px;
+        color: var(--teal);
+      }
+      .dropzone .ddtext {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .dropzone .ddsub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 3px;
+      }
+      input[type="file"] {
+        display: none;
+      }
+
+      .filerow {
+        margin-top: 16px;
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        background: #f5f7fa;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+      .filerow.show {
+        display: flex;
+      }
+      .filerow .fname {
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .filerow .fmeta {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      .filerow button.clear {
+        background: none;
+        border: none;
+        color: #b14545;
+        font-size: 12px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .actionrow {
+        margin-top: 18px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      button.primary {
+        background: var(--teal);
+        color: #fff;
+        border: none;
+        padding: 11px 22px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background 0.15s ease,
+          transform 0.05s ease;
+        letter-spacing: 0.2px;
+      }
+      button.primary:hover {
+        background: #0a5a5a;
+      }
+      button.primary:disabled {
+        background: #a9b3c2;
+        cursor: not-allowed;
+      }
+      button.primary:active {
+        transform: translateY(1px);
+      }
+
+      .status {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .status.err {
+        color: #b14545;
+        font-weight: 600;
+      }
+      .status.ok {
+        color: #1d7a52;
+        font-weight: 600;
+      }
+
+      .resultPanel {
+        padding: 26px 28px 28px;
+        display: none;
+      }
+      .resultPanel.show {
+        display: block;
+      }
+      .resultPanel h2 {
+        margin: 0 0 14px;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--navy);
+      }
+
+      table.preview {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      table.preview thead th {
+        background: var(--navy);
+        color: #fff;
+        text-align: left;
+        padding: 10px 12px;
+        font-weight: 600;
+        font-size: 12.5px;
+        letter-spacing: 0.2px;
+      }
+      table.preview thead th.num {
+        text-align: center;
+      }
+      table.preview tbody td {
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line);
+        color: var(--ink);
+      }
+      table.preview tbody td.num {
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      table.preview tbody tr:nth-child(even) {
+        background: #fafbfc;
+      }
+      table.preview tbody tr.grandtotal td {
+        background: var(--amber);
+        color: #fff;
+        font-weight: 700;
+        border-bottom: none;
+      }
+
+      .tablewrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .resultHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .resultHeader h2 {
+        margin: 0;
+      }
+
+      footer {
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted);
+        padding: 20px 0 30px;
+      }
+
+      .spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        display: inline-block;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <!-- <div class="mark">GB</div> -->
+        <div>
+          <h1>Daily MIS · DCCB</h1>
+          <p class="sub">
+            Uttar Pradesh — DCCB Bank · Daily MIS Summary Portal
+          </p>
+        </div>
+      </div>
+      <div class="datebox" id="todayBox">
+        Report generated on
+        <span id="todayDate"></span>
+      </div>
+    </header>
+    <div class="ledger-rule"></div>
+
+    <main>
+      <section class="panel uploadPanel">
+        <h2>Upload MIS CSV</h2>
+        <p class="hint">
+          Choose the daily MIS export. The portal reads it by column name and
+          builds a bank-wise summary automatically.
+        </p>
+
+        <div class="dropzone" id="dropzone">
+          <div class="icon">⬆</div>
+          <div class="ddtext">Click to choose file, or drag it here</div>
+          <div class="ddsub">.csv files only</div>
+          <input type="file" id="fileInput" accept=".csv" />
+        </div>
+
+        <div class="filerow" id="fileRow">
+          <div>
+            <div class="fname" id="fileName">—</div>
+            <div class="fmeta" id="fileMeta">—</div>
+          </div>
+          <button class="clear" id="clearBtn">Remove</button>
+        </div>
+
+        <div class="actionrow">
+          <button class="primary" id="processBtn" disabled>
+            Generate Summary
+          </button>
+          <span class="status" id="statusMsg"></span>
+        </div>
+      </section>
+
+      <section class="panel resultPanel" id="resultPanel">
+        <div class="resultHeader">
+          <h2>Bank-wise Summary Preview</h2>
+          <div class="downloadrow">
+            <button class="primary" id="downloadBtn">
+              Download XLSX Report
+            </button>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table class="preview" id="previewTable">
+            <thead>
+              <tr>
+                <th>Bank Name</th>
+                <th class="num">Total Application</th>
+                <th class="num">Total Application Amount</th>
+                <th class="num">Total Sanctions</th>
+                <th class="num">Total Sanctioned Amount</th>
+                <th class="num">Count of Disbursement</th>
+                <th class="num">Total Amount Disbursed</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      DCCB Daily MIS Portal · Processing happens entirely in your browser — no
+      data is uploaded to any server.
+    </footer>
+
+    <script>
+      const dateOpts = { day: "2-digit", month: "short", year: "numeric" };
+      document.getElementById("todayDate").textContent =
+        new Date().toLocaleDateString("en-IN", dateOpts);
+
+      let parsedRows = null;
+      let summaryRows = null;
+
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("fileInput");
+      const fileRow = document.getElementById("fileRow");
+      const fileName = document.getElementById("fileName");
+      const fileMeta = document.getElementById("fileMeta");
+      const clearBtn = document.getElementById("clearBtn");
+      const processBtn = document.getElementById("processBtn");
+      const statusMsg = document.getElementById("statusMsg");
+      const resultPanel = document.getElementById("resultPanel");
+      const previewBody = document.getElementById("previewBody");
+      const downloadBtn = document.getElementById("downloadBtn");
+
+      let currentFile = null;
+
+      dropzone.addEventListener("click", () => fileInput.click());
+      dropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropzone.classList.add("drag");
+      });
+      dropzone.addEventListener("dragleave", () =>
+        dropzone.classList.remove("drag"),
+      );
+      dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("drag");
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+      });
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+      });
+
+      function handleFile(file) {
+        if (!file.name.toLowerCase().endsWith(".csv")) {
+          setStatus("Please choose a .csv file.", "err");
+          return;
+        }
+        currentFile = file;
+        fileName.textContent = file.name;
+        fileMeta.textContent = (file.size / 1024).toFixed(1) + " KB";
+        fileRow.classList.add("show");
+        processBtn.disabled = false;
+        setStatus("");
+        resultPanel.classList.remove("show");
+      }
+
+      clearBtn.addEventListener("click", () => {
+        currentFile = null;
+        fileInput.value = "";
+        fileRow.classList.remove("show");
+        processBtn.disabled = true;
+        resultPanel.classList.remove("show");
+        setStatus("");
+      });
+
+      function setStatus(msg, type) {
+        statusMsg.textContent = msg || "";
+        statusMsg.className = "status" + (type ? " " + type : "");
+      }
+
+      // Required column names (matched by header name, case-insensitive, trimmed)
+      const COL = {
+        bank: "Bank Name",
+        loanNo: "Loan Number",
+        totalLoanAmt: "Total Loan Amount",
+        sanctionDate: "Sanction Date",
+        sanctionAmt: "Sanction Amount",
+        disbDate: "Disbursement Date",
+        disbAmt: "Disbursement Amount",
+      };
+
+      function normHeader(h) {
+        return (h || "").toString().trim().toLowerCase();
+      }
+
+      function findKey(headerMap, target) {
+        const norm = normHeader(target);
+        for (const key in headerMap) {
+          if (normHeader(key) === norm) return key;
+        }
+        return null;
+      }
+
+      function toNumber(val) {
+        if (val === null || val === undefined) return null;
+        const s = val.toString().trim().replace(/,/g, "");
+        if (s === "") return null;
+        const n = parseFloat(s);
+        return isNaN(n) ? null : n;
+      }
+
+      function isBlank(val) {
+        return (
+          val === null || val === undefined || val.toString().trim() === ""
+        );
+      }
+
+      processBtn.addEventListener("click", () => {
+        if (!currentFile) return;
+        setStatus("Reading file...");
+        processBtn.disabled = true;
+
+        Papa.parse(currentFile, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function (results) {
+            try {
+              const rows = results.data;
+              if (!rows.length) {
+                setStatus("No data rows found in the CSV.", "err");
+                processBtn.disabled = false;
+                return;
+              }
+              const headerMap = {};
+              Object.keys(rows[0]).forEach((h) => (headerMap[h] = h));
+
+              const keyBank = findKey(headerMap, COL.bank);
+              const keyLoanNo = findKey(headerMap, COL.loanNo);
+              const keyTotalLoanAmt = findKey(headerMap, COL.totalLoanAmt);
+              const keySanctionDate = findKey(headerMap, COL.sanctionDate);
+              const keySanctionAmt = findKey(headerMap, COL.sanctionAmt);
+              const keyDisbDate = findKey(headerMap, COL.disbDate);
+              const keyDisbAmt = findKey(headerMap, COL.disbAmt);
+
+              const missing = [];
+              if (!keyBank) missing.push(COL.bank);
+              if (!keyLoanNo) missing.push(COL.loanNo);
+              if (!keyTotalLoanAmt) missing.push(COL.totalLoanAmt);
+              if (!keySanctionDate) missing.push(COL.sanctionDate);
+              if (!keySanctionAmt) missing.push(COL.sanctionAmt);
+              if (!keyDisbDate) missing.push(COL.disbDate);
+              if (!keyDisbAmt) missing.push(COL.disbAmt);
+
+              if (missing.length) {
+                setStatus(
+                  "Missing expected column(s): " + missing.join(", "),
+                  "err",
+                );
+                processBtn.disabled = false;
+                return;
+              }
+
+              const banks = {};
+
+              rows.forEach((row) => {
+                const bankNameRaw = row[keyBank];
+                if (isBlank(bankNameRaw)) return;
+                const bankName = bankNameRaw.toString().trim();
+
+                if (!banks[bankName]) {
+                  banks[bankName] = {
+                    bank: bankName,
+                    totalApplication: 0,
+                    totalApplicationAmount: 0,
+                    totalSanctions: 0,
+                    totalSanctionedAmount: 0,
+                    countOfDisbursement: 0,
+                    totalAmountDisbursed: 0,
+                  };
+                }
+                const b = banks[bankName];
+
+                // Total Application: count of Loan Number (non-blank)
+                if (!isBlank(row[keyLoanNo])) {
+                  b.totalApplication += 1;
+                }
+
+                // Total Application Amount: sum of Total Loan Amount, skip blanks
+                const loanAmt = toNumber(row[keyTotalLoanAmt]);
+                if (loanAmt !== null) {
+                  b.totalApplicationAmount += loanAmt;
+                }
+
+                // Total Sanctions: count rows where Sanction Date is non-blank
+                if (!isBlank(row[keySanctionDate])) {
+                  b.totalSanctions += 1;
+                }
+
+                // Total Sanctioned Amount: sum of Sanction Amount, skip blanks
+                const sancAmt = toNumber(row[keySanctionAmt]);
+                if (sancAmt !== null) {
+                  b.totalSanctionedAmount += sancAmt;
+                }
+
+                // Count of Disbursement: count rows where Disbursement Date is non-blank
+                if (!isBlank(row[keyDisbDate])) {
+                  b.countOfDisbursement += 1;
+                }
+
+                // Total Amount Disbursed: sum of Disbursement Amount, skip blanks
+                const disbAmt = toNumber(row[keyDisbAmt]);
+                if (disbAmt !== null) {
+                  b.totalAmountDisbursed += disbAmt;
+                }
+              });
+
+              let bankList = Object.values(banks).sort((a, b) =>
+                a.bank.localeCompare(b.bank, "en", { sensitivity: "base" }),
+              );
+
+              const grand = {
+                bank: "Grand Total",
+                totalApplication: 0,
+                totalApplicationAmount: 0,
+                totalSanctions: 0,
+                totalSanctionedAmount: 0,
+                countOfDisbursement: 0,
+                totalAmountDisbursed: 0,
+              };
+              bankList.forEach((b) => {
+                grand.totalApplication += b.totalApplication;
+                grand.totalApplicationAmount += b.totalApplicationAmount;
+                grand.totalSanctions += b.totalSanctions;
+                grand.totalSanctionedAmount += b.totalSanctionedAmount;
+                grand.countOfDisbursement += b.countOfDisbursement;
+                grand.totalAmountDisbursed += b.totalAmountDisbursed;
+              });
+
+              summaryRows = bankList.concat([grand]);
+              renderPreview(summaryRows);
+              setStatus(
+                "Summary generated from " + rows.length + " rows.",
+                "ok",
+              );
+              resultPanel.classList.add("show");
+              processBtn.disabled = false;
+            } catch (err) {
+              console.error(err);
+              setStatus("Error while processing file: " + err.message, "err");
+              processBtn.disabled = false;
+            }
+          },
+          error: function (err) {
+            setStatus("Could not parse CSV: " + err.message, "err");
+            processBtn.disabled = false;
+          },
+        });
+      });
+
+      function fmtNum(n) {
+        return Math.round(n).toString();
+      }
+
+      function renderPreview(data) {
+        previewBody.innerHTML = "";
+        data.forEach((row) => {
+          const tr = document.createElement("tr");
+          if (row.bank === "Grand Total") tr.classList.add("grandtotal");
+          tr.innerHTML = `
+      <td>${row.bank}</td>
+      <td class="num">${fmtNum(row.totalApplication)}</td>
+      <td class="num">${fmtNum(row.totalApplicationAmount)}</td>
+      <td class="num">${fmtNum(row.totalSanctions)}</td>
+      <td class="num">${fmtNum(row.totalSanctionedAmount)}</td>
+      <td class="num">${fmtNum(row.countOfDisbursement)}</td>
+      <td class="num">${fmtNum(row.totalAmountDisbursed)}</td>
+    `;
+          previewBody.appendChild(tr);
+        });
+      }
+
+      downloadBtn.addEventListener("click", async () => {
+        if (!summaryRows) return;
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '<span class="spinner"></span>Building file...';
+
+        try {
+          const workbook = new ExcelJS.Workbook();
+          const sheet = workbook.addWorksheet("Daily MIS Summary");
+
+          const headers = [
+            "Bank Name",
+            "Total Application",
+            "Total Application Amount",
+            "Total Sanctions",
+            "Total Sanctioned Amount",
+            "Count of Disbursement",
+            "Total Amount Disbursed",
+          ];
+          sheet.addRow(headers);
+
+          summaryRows.forEach((row) => {
+            sheet.addRow([
+              row.bank,
+              row.totalApplication,
+              row.totalApplicationAmount,
+              row.totalSanctions,
+              row.totalSanctionedAmount,
+              row.countOfDisbursement,
+              row.totalAmountDisbursed,
+            ]);
+          });
+
+          // Style header row
+          const headerRow = sheet.getRow(1);
+          headerRow.eachCell((cell) => {
+            cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FF0B2545" },
+            };
+            cell.alignment = { vertical: "middle", horizontal: "center" };
+            cell.border = {
+              top: { style: "thin", color: { argb: "FFB9C2D4" } },
+              bottom: { style: "thin", color: { argb: "FFB9C2D4" } },
+              left: { style: "thin", color: { argb: "FFB9C2D4" } },
+              right: { style: "thin", color: { argb: "FFB9C2D4" } },
+            };
+          });
+          headerRow.height = 22;
+
+          const lastRowNum = sheet.rowCount;
+          sheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return;
+            const isGrandTotal = rowNumber === lastRowNum;
+            row.eachCell((cell, colNumber) => {
+              if (colNumber >= 2) cell.numFmt = "0";
+              cell.alignment = {
+                vertical: "middle",
+                horizontal: colNumber === 1 ? "left" : "center",
+              };
+              cell.border = {
+                top: { style: "thin", color: { argb: "FFDFE3EA" } },
+                bottom: { style: "thin", color: { argb: "FFDFE3EA" } },
+                left: { style: "thin", color: { argb: "FFDFE3EA" } },
+                right: { style: "thin", color: { argb: "FFDFE3EA" } },
+              };
+              if (isGrandTotal) {
+                cell.font = {
+                  bold: true,
+                  color: { argb: "FFFFFFFF" },
+                  size: 11,
+                };
+                cell.fill = {
+                  type: "pattern",
+                  pattern: "solid",
+                  fgColor: { argb: "FFC98A2C" },
+                };
+              } else if (rowNumber % 2 === 0) {
+                cell.fill = {
+                  type: "pattern",
+                  pattern: "solid",
+                  fgColor: { argb: "FFF7F8FA" },
+                };
+              }
+            });
+            row.height = 19;
+          });
+
+          // Column widths
+          sheet.getColumn(1).width = 32;
+          for (let c = 2; c <= 7; c++) sheet.getColumn(c).width = 22;
+
+          sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+          const buffer = await workbook.xlsx.writeBuffer();
+          const blob = new Blob([buffer], { type: "application/octet-stream" });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const todayStr = new Date().toISOString().slice(0, 10);
+          a.href = url;
+          a.download = `Daily_MIS_DCCB_${todayStr}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          setStatus("XLSX report downloaded.", "ok");
+        } catch (err) {
+          console.error(err);
+          setStatus("Error generating XLSX: " + err.message, "err");
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = "Download XLSX Report";
+        }
+      });
+    </script>
+  </body>
+</html>
