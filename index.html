@@ -400,11 +400,11 @@
               <tr>
                 <th>Bank Name</th>
                 <th class="num">Total Application</th>
-                <th class="num">Total Application Amount</th>
+                <th class="num">Total Application Amount(₹ in Lakhs)</th>
                 <th class="num">Total Sanctions</th>
-                <th class="num">Total Sanctioned Amount</th>
+                <th class="num">Total Sanctioned Amount(₹ in Lakhs)</th>
                 <th class="num">Count of Disbursement</th>
-                <th class="num">Total Amount Disbursed</th>
+                <th class="num">Total Amount Disbursed(₹ in Lakhs)</th>
               </tr>
             </thead>
             <tbody id="previewBody"></tbody>
@@ -676,11 +676,11 @@
           tr.innerHTML = `
       <td>${row.bank}</td>
       <td class="num">${fmtNum(row.totalApplication)}</td>
-      <td class="num">${fmtNum(row.totalApplicationAmount)}</td>
+      <td class="num">${(row.totalApplicationAmount / 100000).toFixed(2)}</td>
       <td class="num">${fmtNum(row.totalSanctions)}</td>
-      <td class="num">${fmtNum(row.totalSanctionedAmount)}</td>
+      <td class="num">${(row.totalSanctionedAmount / 100000).toFixed(2)}</td>
       <td class="num">${fmtNum(row.countOfDisbursement)}</td>
-      <td class="num">${fmtNum(row.totalAmountDisbursed)}</td>
+      <td class="num">${(row.totalAmountDisbursed / 100000).toFixed(2)}</td>
     `;
           previewBody.appendChild(tr);
         });
@@ -698,11 +698,11 @@
           const headers = [
             "Bank Name",
             "Total Application",
-            "Total Application Amount",
+            "Total Application Amount (₹ in Lakhs)",
             "Total Sanctions",
-            "Total Sanctioned Amount",
+            "Total Sanctioned Amount (₹ in Lakhs)",
             "Count of Disbursement",
-            "Total Amount Disbursed",
+            "Total Amount Disbursed (₹ in Lakhs)",
           ];
           sheet.addRow(headers);
 
@@ -710,11 +710,11 @@
             sheet.addRow([
               row.bank,
               row.totalApplication,
-              row.totalApplicationAmount,
+              row.totalApplicationAmount / 100000, // Convert to lakhs
               row.totalSanctions,
-              row.totalSanctionedAmount,
+              row.totalSanctionedAmount / 100000, // Convert to lakhs
               row.countOfDisbursement,
-              row.totalAmountDisbursed,
+              row.totalAmountDisbursed / 100000, // Convert to lakhs
             ]);
           });
 
@@ -742,7 +742,9 @@
             if (rowNumber === 1) return;
             const isGrandTotal = rowNumber === lastRowNum;
             row.eachCell((cell, colNumber) => {
-              if (colNumber >= 2) cell.numFmt = "0";
+              if (colNumber == 3 || colNumber == 5 || colNumber == 7)
+                cell.numFmt = "0.00";
+              else if (colNumber >= 2) cell.numFmt = "0";
               cell.alignment = {
                 vertical: "middle",
                 horizontal: colNumber === 1 ? "left" : "center",
